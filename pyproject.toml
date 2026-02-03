@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Python port of the jpinfect R package for Japanese infectious disease surveillance data."
 readme = "README.md"
 license = { text = "GPL-3.0-or-later" }
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 authors = [{ name = "jpinfectpy contributors" }]
 keywords = ["epidemiology", "surveillance", "japan", "infectious-disease", "polars", "pandas"]
 classifiers = [
@@ -12,6 +12,7 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -24,6 +25,7 @@ dependencies = [
   "httpx>=0.27",
   "platformdirs>=4.2",
   "openpyxl>=3.1",
+  "pyarrow>=14.0",
 ]
 
 [project.optional-dependencies]
@@ -71,7 +73,7 @@ indent-style = "space"
 line-ending = "lf"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.10"
 strict = true
 warn_unused_ignores = true
 warn_redundant_casts = true
