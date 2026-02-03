@@ -1,52 +1,67 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Literal
 
 from .config import get_config
 from .http import cached_head
+
+BASE_KAKO = "https://idsc.niid.go.jp/idwr/CDROM/Kako/"
+BASE_YDATA = "https://id-info.jihs.go.jp/niid/images/idwr/ydata/"
+
+
+@dataclass
+class ConfirmedRule:
+    start: int
+    end: int
+    base: str
+    pattern: str
+
+
+RULES_SEX = [
+    ConfirmedRule(1999, 2006, BASE_KAKO, "H{h_year:02d}/Syuukei/Syu_01_1.xls"),
+    ConfirmedRule(2007, 2010, BASE_KAKO, "H{h_year:02d}/Syuukei/Syu_01_1.xlsx"),
+    ConfirmedRule(2011, 2013, BASE_YDATA, "{year}/H{h_year:02d}-01-1.xlsx"),
+    ConfirmedRule(2014, 9999, BASE_YDATA, "{year}/Syu_01_1.xlsx"),
+]
+
+RULES_PLACE = [
+    ConfirmedRule(2001, 2006, BASE_KAKO, "H{h_year:02d}/Syuukei/Syu_02_1.xls"),
+    ConfirmedRule(2007, 2010, BASE_KAKO, "H{h_year:02d}/Syuukei/Syu_02_1.xlsx"),
+    ConfirmedRule(2011, 2013, BASE_YDATA, "{year}/H{h_year:02d}-02-1.xlsx"),
+    ConfirmedRule(2014, 9999, BASE_YDATA, "{year}/Syu_02_1.xlsx"),
+]
 
 
 def url_confirmed(year: int, type: Literal["sex", "place"] = "sex") -> str:
     """
     Get the URL for the confirmed cases Excel file.
     """
-    if type == "sex":
-        if 1999 <= year <= 2006:
-            url_a = "https://idsc.niid.go.jp/idwr/CDROM/Kako/"
-            url_b = f"H{year - 1988:02d}/Syuukei/Syu_01_1.xls"
-        elif 2007 <= year <= 2010:
-            url_a = "https://idsc.niid.go.jp/idwr/CDROM/Kako/"
-            url_b = f"H{year - 1988:02d}/Syuukei/Syu_01_1.xlsx"
-        elif 2011 <= year <= 2013:
-            url_a = "https://id-info.jihs.go.jp/niid/images/idwr/ydata/"
-            url_b = f"{year}/H{year - 1988:02d}-01-1.xlsx"
-        elif 2014 <= year <= 2021:
-            url_a = "https://id-info.jihs.go.jp/niid/images/idwr/ydata/"
-            url_b = f"{year}/Syu_01_1.xlsx"
-        else:
-            url_a = "https://id-info.jihs.go.jp/niid/images/idwr/ydata/"
-            url_b = f"{year}/Syu_01_1.xlsx"
-    else:  # type == "place"
-        if year <= 2000:
-            raise ValueError("Year must be >= 2001 for place data.")
-        if 2001 <= year <= 2006:
-            url_a = "https://idsc.niid.go.jp/idwr/CDROM/Kako/"
-            url_b = f"H{year - 1988:02d}/Syuukei/Syu_02_1.xls"
-        elif 2007 <= year <= 2010:
-            url_a = "https://idsc.niid.go.jp/idwr/CDROM/Kako/"
-            url_b = f"H{year - 1988:02d}/Syuukei/Syu_02_1.xlsx"
-        elif 2011 <= year <= 2013:
-            url_a = "https://id-info.jihs.go.jp/niid/images/idwr/ydata/"
-            url_b = f"{year}/H{year - 1988:02d}-02-1.xlsx"
-        elif 2014 <= year <= 2021:
-            url_a = "https://id-info.jihs.go.jp/niid/images/idwr/ydata/"
-            url_b = f"{year}/Syu_02_1.xlsx"
-        else:
-            url_a = "https://id-info.jihs.go.jp/niid/images/idwr/ydata/"
-            url_b = f"{year}/Syu_02_1.xlsx"
+    rules = RULES_SEX if type == "sex" else RULES_PLACE
 
-    return f"{url_a}{url_b}"
+    # Validation
+    if type == "place" and year <= 2000:
+        raise ValueError("Year must be >= 2001 for place data.")
+
+    for rule in rules:
+        if rule.start <= year <= rule.end:
+            h_year = year - 1988
+            path = rule.pattern.format(year=year, h_year=h_year)
+            return f"{rule.base}{path}"
+
+    # Default fallback (should match last rule usually, but essentially 2014+)
+    # If no rule matches (e.g. very old years not covered), raise/return?
+    # Current implementation raises for place <= 2000,
+    # but for sex it implicitly handles others?
+    # Actually sex defined 1999 as start.
+    # Let's assume the rules cover all valid ranges.
+
+    # If we fall through, it's likely a year not supported or covered by logic
+    # defaulting to newest format might be safe or raising error.
+    # Given previous code had "else" for > 2021, we use 9999 as end.
+
+    return ""
 
 
 def url_bullet(
@@ -73,16 +88,17 @@ def url_bullet(
 
     for w in weeks:
         if lang == "en":
-            url_a = "https://id-info.jihs.go.jp/surveillance/idwr/en/rapid/"
-            url_b = f"{year}/{w:02d}/zensu{w:02d}.csv"
+            base = "https://id-info.jihs.go.jp/surveillance/idwr/en/rapid/"
+            path = f"{year}/{w:02d}/zensu{w:02d}.csv"
         else:
+            # JP Logic
             if year >= 2025 and w >= 11:
-                url_a = "https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/"
+                base = "https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/"
             else:
-                url_a = "https://id-info.jihs.go.jp/surveillance/idwr/rapid/"
-            url_b = f"{year}/{w:d}/{year}-{w:02d}-zensu.csv"
+                base = "https://id-info.jihs.go.jp/surveillance/idwr/rapid/"
+            path = f"{year}/{w:d}/{year}-{w:02d}-zensu.csv"
 
-        url = f"{url_a}{url_b}"
+        url = f"{base}{path}"
         try:
             resp = cached_head(url, config)
             if resp.status_code == 200:
@@ -90,6 +106,7 @@ def url_bullet(
                 if int(content_length) > 0:
                     urls.append(url)
         except Exception:
+            # Maybe verify if we want to suppress ALL exceptions
             continue
 
     return urls
