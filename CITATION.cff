@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use jpinfectpy, please cite the upstream jpinfect R package and this reimplementation."
+title: "jpinfectpy: Python port of jpinfect"
+version: 0.1.0
+license: GPL-3.0-or-later
+repository-code: "https://github.com/your-org/jpinfectpy"
+url: "https://github.com/your-org/jpinfectpy"
+authors:
+  - name: "jpinfectpy contributors"
+references:
+  - type: software
+    title: "jpinfect: infectious disease surveillance data for Japan"
+    authors:
+      - name: "Tomonori Hoshi"
+    url: "https://github.com/TomonoriHoshi/jpinfect"
+    license: GPL-3.0

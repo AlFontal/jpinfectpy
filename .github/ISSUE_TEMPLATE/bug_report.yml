@@ -1,0 +1,18 @@
+name: Bug report
+description: Report a problem or regression
+labels: [bug]
+body:
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: Describe the issue and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: Provide a minimal, reproducible example.
+  - type: textarea
+    attributes:
+      label: Environment
+      description: OS, Python version, jpinfectpy version.
