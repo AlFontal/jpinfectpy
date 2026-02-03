@@ -6,7 +6,7 @@ from typing import Literal
 
 import polars as pl
 
-from .types import AnyFrame, ReturnType
+from .types import AnyFrame, DatasetName, ReturnType
 from .utils import resolve_return_type, to_pandas
 
 _DATASETS = {
@@ -26,10 +26,22 @@ def _data_path(name: str) -> Path:
 
 
 def load_dataset(
-    name: Literal["sex_prefecture", "place_prefecture", "bullet"],
+    name: DatasetName | Literal["sex_prefecture", "place_prefecture"],
     *,
     return_type: ReturnType | None = None,
 ) -> AnyFrame:
+    """
+    Load a bundled dataset.
+
+    Args:
+        name: "sex", "place", or "bullet".
+              "sex_prefecture" and "place_prefecture" are aliases.
+    """
+    if name == "sex":
+        name = "sex_prefecture"
+    elif name == "place":
+        name = "place_prefecture"
+
     path = _data_path(name)
     df = pl.read_parquet(path)
     if resolve_return_type(return_type) == "pandas":

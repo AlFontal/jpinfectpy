@@ -15,28 +15,22 @@ uv pip install jpinfectpy
 ## Quickstart
 
 ```python
-from pathlib import Path
 import jpinfectpy as jp
 
-# Configure defaults
-jp.configure(return_type="pandas", rate_limit_per_minute=10)
+# 1. Load bundled High-Quality Data (Recommended)
+# Includes historical data (sex: 1999-2023, place: 2001-2023)
+df_sex = jp.load("sex")
+df_place = jp.load("place")
 
-# Build URLs
-jp.url_confirmed(2022, "sex")
-jp.url_bullet(2025, week=1, lang="en")
+# 2. Download & Read Latest Raw Data
+# Download to system cache and read
+path = jp.download("sex", 2024)
+df_2024 = jp.read(path)
 
-# Download raw files
-out_dir = Path("data/raw")
-sex_path = jp.get_confirmed(2022, "sex", out_dir)
-bullet_paths = jp.get_bullet(2025, week=[1, 2], out_dir=out_dir, lang="en")
-
-# Read data (Polars internal, Pandas output by default)
-confirmed = jp.read_confirmed(sex_path, type="sex")
-bullet = jp.read_bullet(out_dir, year=2025, week=[1, 2], lang="en")
-
-# Merge and pivot
-merged = jp.merge(confirmed, jp.read_confirmed(sex_path, type="place"))
-wide = jp.pivot(bullet)
+# 3. Analyze Patterns (Bullet/Weekly Reports)
+# Download specific weeks
+bullet_paths = jp.download("bullet", 2025, week=[1, 2])
+df_bullet = jp.read(bullet_paths[0])
 ```
 
 ## Return Types
@@ -58,10 +52,11 @@ Please do not download data excessively. This library includes a disk cache, rat
 | --- | --- | --- |
 | `jpinfect_url_confirmed()` | `url_confirmed()` | Same URL logic |
 | `jpinfect_url_bullet()` | `url_bullet()` | Same URL logic |
-| `jpinfect_get_confirmed()` | `get_confirmed()` | Downloads raw Excel |
-| `jpinfect_get_bullet()` | `get_bullet()` | Downloads raw CSV |
-| `jpinfect_read_confirmed()` | `read_confirmed()` | Polars-first parsing |
-| `jpinfect_read_bullet()` | `read_bullet()` | Polars-first parsing |
+| `data()` | `load()` | Bundled datasets |
+| `jpinfect_get_confirmed()` | `download()` | Unified download |
+| `jpinfect_get_bullet()` | `download()` | Unified download |
+| `jpinfect_read_confirmed()` | `read()` | Unified read |
+| `jpinfect_read_bullet()` | `read()` | Unified read |
 | `jpinfect_merge()` | `merge()` | Full join + bind rows |
 | `jpinfect_pivot()` | `pivot()` | Wide/long conversion |
 

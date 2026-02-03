@@ -430,6 +430,7 @@ name = "jpinfectpy"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "fastexcel" },
     { name = "httpx" },
     { name = "openpyxl" },
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -455,6 +456,7 @@ excel = [
 
 [package.metadata]
 requires-dist = [
+    { name = "fastexcel", specifier = ">=0.10" },
     { name = "fastexcel", marker = "extra == 'excel'", specifier = ">=0.10" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mkdocs", marker = "extra == 'dev'", specifier = ">=1.6" },
