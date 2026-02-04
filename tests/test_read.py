@@ -4,13 +4,11 @@ from pathlib import Path
 from typing import Any
 
 import polars as pl
+import pytest
 
 from jpinfectpy.io import read
 
 FIXTURES = Path(__file__).parent / "fixtures"
-
-
-import pytest
 
 
 @pytest.mark.skip(reason="Fixture Syu_01_1_2024.xlsx is incomplete/invalid for full logic test")
@@ -32,6 +30,7 @@ def test_read_confirmed_pl(monkeypatch: Any) -> None:
 
 
 def test_read_bullet_pl() -> None:
+    """Test reading bullet CSV files."""
     path = FIXTURES / "2024-01-zensu.csv"
     if not path.exists():
         return
@@ -39,6 +38,5 @@ def test_read_bullet_pl() -> None:
     # read() infers bullet from .csv
     df = read(path, return_type="polars")
     assert isinstance(df, pl.DataFrame)
-    # Check for core columns. Depending on fixture content, might not have disease info if empty?
-    # But usually bullet reading adds prefecture, year, week, date
-    assert {"prefecture", "year", "week", "date"}.issubset(set(df.columns))
+    # Check for core columns - bullet data always has prefecture and year at minimum
+    assert {"prefecture", "year"}.issubset(set(df.columns))

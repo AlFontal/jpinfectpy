@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 from typing import Any
 
-import jpinfectpy.urls as urls
+from jpinfectpy import urls
 
 
 def test_url_confirmed_sex_2010() -> None:
