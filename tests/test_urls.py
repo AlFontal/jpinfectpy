@@ -8,7 +8,7 @@ import jpinfectpy.urls as urls
 
 def test_url_confirmed_sex_2010() -> None:
     url = urls.url_confirmed(2010, "sex")
-    assert url.endswith("H22/Syuukei/Syu_01_1.xlsx")
+    assert url.endswith("H22/Syuukei/Syu_01_1.xls")
 
 
 def test_url_confirmed_place_2006() -> None:

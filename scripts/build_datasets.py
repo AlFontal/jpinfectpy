@@ -5,9 +5,9 @@ This downloads historical data and saves it as Parquet files in the package.
 """
 
 from pathlib import Path
-import shutil
 
 import polars as pl
+
 from jpinfectpy import io
 
 DATA_DIR = Path(__file__).parent.parent / "src" / "jpinfectpy" / "data"

@@ -4,7 +4,16 @@ Python port of the R package `jpinfect` for Japanese infectious disease surveill
 
 Upstream R package: [TomonoriHoshi/jpinfect](https://github.com/TomonoriHoshi/jpinfect)
 
+# Load combined historical + recent data (updates automatically)
+df_all = jp.load_all()
+
+# Download current weekly reports (2024+)
+files = jp.download_recent()
+```
+
 Data source: [Infectious Disease Surveillance (JIHS)](https://id-info.jihs.go.jp/)
+
+For detailed descriptions of the available datasets, see [DATASETS.md](./DATASETS.md).
 
 ## Install
 

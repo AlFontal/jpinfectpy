@@ -113,6 +113,14 @@ def _read_excel_sheets(
             # Read headerless
             df = pl.read_excel(path_str, sheet_id=sheet, has_header=False)
 
+            # Helper for when read_excel returns a dict (e.g. if sheet_id behavior varies)
+            if isinstance(df, dict):
+                # If we asked for specific sheet but got dict, assume single item or try to grab first
+                if len(df) >= 1:
+                    df = next(iter(df.values()))
+                else:
+                    continue
+
             if df.height < 5:
                 continue
 
@@ -300,10 +308,7 @@ def _read_bullet_pl(
     week: Iterable[int] | None = None,
 ) -> pl.DataFrame:
     # Handle single file or directory
-    if path.is_dir():
-        files = list(path.glob("*.csv"))
-    else:
-        files = [path]
+    files = list(path.glob("*.csv")) if path.is_dir() else [path]
 
     if week is not None:
         week_set = {int(w) for w in week}
@@ -312,44 +317,87 @@ def _read_bullet_pl(
     frames: list[pl.DataFrame] = []
     for p in sorted(files):
         try:
-            df = pl.read_csv(p, infer_schema_length=0)
-            cleaned = _col_rename_bullet(df.columns)
-            if len(cleaned) == len(df.columns):
-                df = df.rename(dict(zip(df.columns, cleaned, strict=True)))
-            if df.columns[0] != "prefecture":
-                df = df.rename({df.columns[0]: "prefecture"})
+            # Skip metadata (lines 0-2), header is line 3, subheader line 4
+            df = pl.read_csv(p, skip_rows=3, infer_schema_length=0)
 
-            file_year, file_week = _extract_year_week(p)
-            y = year or file_year
-            w = file_week
-            if y is None or w is None:
-                continue
+            # Drop the first data row (which contains the subheader "Current week", "Cum 2024"...)
+            if df.height > 0:
+                df = df.slice(1)
 
-            if "year" not in df.columns:
-                df = df.with_columns(pl.lit(y).alias("year"))
-            if "week" not in df.columns:
-                df = df.with_columns(pl.lit(w).alias("week"))
-            if "date" not in df.columns:
-                df = df.with_columns(
-                    pl.struct(["year", "week"])
-                    .map_elements(
-                        lambda x: _iso_week_date(int(x["year"]), int(x["week"])),
-                        return_dtype=pl.Date,
-                    )
-                    .alias("date")
+            # Keep only valid columns (Prefecture + Disease cols, exclude "Cum" cols)
+            # The "Cum" cols usually have names like "_duplicated_..." because they were empty in header line 3
+            to_select = [
+                c
+                for c in df.columns
+                if (
+                    c == "Prefecture"
+                    or c == "prefecture"
+                    or not (c.startswith("_duplicated_") or c.startswith("field_"))
+                )
+            ]
+            df = df.select(to_select)
+
+            # Clean column names
+            # Clean column names
+            # Map old -> new. _col_rename_bullet removes empty ones, so lengths might differ if we had bad cols
+            # But we already filtered.
+            # Let's map safely.
+            new_names = {}
+            for c in df.columns:
+                clean_name = _col_rename_bullet([c])
+                if clean_name:
+                    new_names[c] = clean_name[0]
+                else:
+                    new_names[c] = c  # Fallback
+
+            df = df.rename(new_names)
+
+            if "Prefecture" in df.columns:
+                df = df.rename({"Prefecture": "prefecture"})
+
+            # Ensure proper types
+            # "prefecture" is str. Others are counts (int).
+            # Convert counts to int, coercing errors (like "-") to null -> 0
+            value_vars = [c for c in df.columns if c != "prefecture"]
+
+            # Unpivot to Long
+            if value_vars:
+                # Cast to numeric first? Or let unpivot handle?
+                # Better to unpivot strings then clean.
+                long_df = df.unpivot(
+                    index=["prefecture"], on=value_vars, variable_name="disease", value_name="count"
                 )
 
-            df = df.select(
-                [
-                    "prefecture",
-                    "year",
-                    "week",
-                    "date",
-                    *[c for c in df.columns if c not in {"prefecture", "year", "week", "date"}],
-                ]
-            )
-            frames.append(df)
+                # Check year/week
+                file_year, file_week = _extract_year_week(p)
+                y = year or file_year
+                w = file_week
+
+                if y is not None:
+                    long_df = long_df.with_columns(pl.lit(y).alias("year"))
+                if w is not None:
+                    long_df = long_df.with_columns(pl.lit(w).alias("week"))
+
+                # Date
+                if "year" in long_df.columns and "week" in long_df.columns:
+                    long_df = long_df.with_columns(
+                        pl.struct(["year", "week"])
+                        .map_elements(
+                            lambda x: _iso_week_date(int(x["year"]), int(x["week"])),
+                            return_dtype=pl.Date,
+                        )
+                        .alias("date")
+                    )
+
+                # Clean count
+                long_df = long_df.with_columns(
+                    pl.col("count").cast(pl.Float64, strict=False).fill_null(0).cast(pl.Int64)
+                )
+
+                frames.append(long_df)
+
         except Exception:
+            # print(f"Error parsing {p}: {e}")
             continue
 
     if not frames:
@@ -444,7 +492,59 @@ def download(
                 actual_file.rename(final_dest)
                 return final_dest
 
-        return actual_file
+
+def download_recent(
+    *,
+    out_dir: Path | str | None = None,
+    overwrite: bool = False,
+    lang: Literal["en", "ja"] = "en",
+) -> list[Path]:
+    """
+    Download all available bullet data (Weekly Reports) from 2024 onwards.
+
+    Iterates through years and weeks to fetch all available CSVs.
+    Stops fetching for a year after multiple consecutive 404s (end of data).
+    """
+    current_year = dt.date.today().year
+    years = range(2024, current_year + 2)
+
+    all_files: list[Path] = []
+
+    for year in years:
+        # Optimization: Try downloading in batches or simply iterate.
+        # Since we don't know the max week, we iterate 1-53.
+        # If we hit 404s for > 5 weeks, we assume future and stop the year.
+
+        miss_count = 0
+        year_files: list[Path] = []
+
+        for week in range(1, 54):
+            try:
+                paths = download(
+                    "bullet", year, out_dir=out_dir, overwrite=overwrite, week=week, lang=lang
+                )
+                # download returns list[Path] for bullet
+                if paths:
+                    year_files.extend(paths)
+                    miss_count = 0
+                else:
+                    miss_count += 1
+            except Exception:
+                miss_count += 1
+
+            # Stop if we miss too many weeks in a row (likely future)
+            if miss_count > 5:
+                break
+
+        if not year_files:
+            # If we didn't find anything for this year (and it's not the start),
+            # maybe we are too far in future years.
+            if year > current_year:
+                break
+
+        all_files.extend(year_files)
+
+    return all_files
 
 
 def read(
@@ -474,10 +574,7 @@ def read(
             # Default fallback?
             raise ValueError("Could not infer dataset type from filename. Please specify 'type'.")
 
-    if type == "bullet":
-        df = _read_bullet_pl(path)
-    else:
-        df = _read_confirmed_pl(path, type=type)
+    df = _read_bullet_pl(path) if type == "bullet" else _read_confirmed_pl(path, type=type)
 
     if resolve_return_type(return_type) == "pandas":
         return to_pandas(df)
