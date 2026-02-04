@@ -63,10 +63,44 @@ packages = ["src/jpinfectpy"]
 line-length = 100
 indent-width = 4
 src = ["src", "tests"]
+exclude = [
+  "scripts/",
+  "verify_urls.py",
+  ".venv",
+  "__pycache__",
+]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
-ignore = ["E501"]
+select = [
+  "E",    # pycodestyle errors
+  "F",    # pyflakes
+  "I",    # isort
+  "B",    # flake8-bugbear
+  "UP",   # pyupgrade
+  "SIM",  # flake8-simplify
+  "RUF",  # ruff-specific rules
+  "C4",   # flake8-comprehensions
+  "PL",   # pylint
+  "N",    # pep8-naming
+  "ANN",  # flake8-annotations
+  "D",    # pydocstyle
+]
+ignore = [
+  "E501",    # line too long (handled by formatter)
+  "ANN401",  # dynamically typed expressions (Any)
+  "D100",    # missing docstring in public module (too strict)
+  "D103",    # missing docstring in public function (too strict for tests)
+  "D104",    # missing docstring in public package (too strict)
+  "D203",    # 1 blank line required before class docstring (conflicts with D211)
+  "D213",    # multi-line docstring summary should start at second line (conflicts with D212)
+  "PLR0911", # too many return statements (intentional for download function)
+  "PLR0912", # too many branches (intentional for complex logic)
+  "PLR0913", # too many arguments to function call
+  "PLR2004", # magic value used in comparison
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.format]
 quote-style = "double"
@@ -92,3 +126,17 @@ minversion = "8.0"
 testpaths = ["tests"]
 addopts = "-ra"
 markers = ["integration: networked integration tests"]
+
+[tool.coverage.run]
+source = ["jpinfectpy"]
+omit = ["*/tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
