@@ -56,8 +56,8 @@ jobs:
       - name: Install (locked)
         run: uv sync --frozen --all-extras --dev
 
-      - name: Pytest
-        run: uv run --frozen pytest
+      - name: Pytest with coverage
+        run: uv run --frozen pytest --cov=jpinfectpy --cov-report=term-missing
 
   build:
     runs-on: ubuntu-latest
