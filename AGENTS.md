@@ -1,10 +1,10 @@
 # AGENTS.md - Guide for AI Agents
 
-This document provides guidance for AI agents (like Gemini, Claude, or GPT) working on the jpinfectpy repository. It covers the architecture, development setup, code standards, and common tasks.
+This document provides guidance for AI agents (like Gemini, Claude, or GPT) working on the jp_idwr_db repository. It covers the architecture, development setup, code standards, and common tasks.
 
 ## Repository Overview
 
-**Purpose**: jpinfectpy is a Python port of the R package `jpinfect`, providing access to Japanese infectious disease surveillance data from the National Institute of Infectious Diseases (NIID).
+**Purpose**: jp_idwr_db is a Python port of the R package `jpinfect`, providing access to Japanese infectious disease surveillance data from the National Institute of Infectious Diseases (NIID).
 
 **Key Features**:
 - Download and read raw surveillance data (Excel and CSV files)
@@ -20,8 +20,8 @@ This document provides guidance for AI agents (like Gemini, Claude, or GPT) work
 ## Package Structure
 
 ```
-jpinfectpy/
-├── src/jpinfectpy/         # Main package code
+jp_idwr_db/
+├── src/jp_idwr_db/         # Main package code
 │   ├── __init__.py         # Public API exports
 │   ├── config.py           # Global configuration system
 │   ├── datasets.py         # Bundled dataset loading
@@ -65,7 +65,7 @@ User → download() → url_confirmed()/url_bullet() → download_urls() → cac
 
 - `url_*()` functions generate URLs based on year, type, and historical URL patterns
 - `download_urls()` applies rate limiting and uses `cached_get()`
-- `cached_get()` stores files in `~/.cache/jpinfectpy/http/` with ETag metadata
+- `cached_get()` stores files in `~/.cache/jp_idwr_db/http/` with ETag metadata
 
 ### 2. Read Flow
 
@@ -114,8 +114,8 @@ df = jp.load("sex", return_type="polars")
 
 ```bash
 # Clone the repository
-git clone https://github.com/AlFontal/jpinfectpy.git
-cd jpinfectpy
+git clone https://github.com/AlFontal/jp_idwr_db.git
+cd jp_idwr_db
 
 # Install with uv (installs dependencies + dev tools)
 uv sync --all-extras --dev
@@ -137,7 +137,7 @@ The project uses `uv` for reproducible dependency management. The `uv.lock` file
 uv run pytest
 
 # Run with coverage
-uv run pytest --cov=jpinfectpy --cov-report=term-missing
+uv run pytest --cov=jp_idwr_db --cov-report=term-missing
 
 # Run specific test file
 uv run pytest tests/test_transform.py
@@ -286,16 +286,16 @@ Workflow: `.github/workflows/ci.yml`
 
 ### Adding a New Dataset Type
 
-1. Update `DatasetName` type in `src/jpinfectpy/types.py`
-2. Add URL generation logic in `src/jpinfectpy/urls.py`
-3. Add parsing logic in `src/jpinfectpy/io.py` (or reuse existing)
+1. Update `DatasetName` type in `src/jp_idwr_db/types.py`
+2. Add URL generation logic in `src/jp_idwr_db/urls.py`
+3. Add parsing logic in `src/jp_idwr_db/io.py` (or reuse existing)
 4. Update docstrings in affected functions
 5. Add tests in `tests/`
 
 ### Adding a New Transformation
 
-1. Add function to `src/jpinfectpy/transform.py`
-2. Export in `src/jpinfectpy/__init__.py`
+1. Add function to `src/jp_idwr_db/transform.py`
+2. Export in `src/jp_idwr_db/__init__.py`
 3. Add tests in `tests/test_transform.py`
 4. Update docstrings and type hints
 
@@ -304,7 +304,7 @@ Workflow: `.github/workflows/ci.yml`
 Excel format changes are the most common maintenance task. If the NIID website changes file structure:
 
 1. **Download sample file** and inspect manually
-2. **Update `_read_excel_sheets()`** in `src/jpinfectpy/io.py`:
+2. **Update `_read_excel_sheets()`** in `src/jp_idwr_db/io.py`:
    - Check row offsets for headers (currently rows 2-3)
    - Update column name cleaning in `_resolve_headers()`
 3. **Update `_sheet_range_for_year()`** if sheet count changes
@@ -312,9 +312,9 @@ Excel format changes are the most common maintenance task. If the NIID website c
 
 ### Releasing a New Version
 
-1. Update version in `src/jpinfectpy/__init__.py`
+1. Update version in `src/jp_idwr_db/__init__.py`
 2. Update version in `pyproject.toml`
-3. Update version in `src/jpinfectpy/config.py` (user agent string)
+3. Update version in `src/jp_idwr_db/config.py` (user agent string)
 4. Update `CHANGELOG.md`
 5. Create git tag: `git tag -a v0.x.0 -m "Release v0.x.0"`
 6. Push tag: `git push origin v0.x.0`
@@ -348,8 +348,8 @@ All data-returning functions accept `return_type="pandas"|"polars"`:
 
 ### Caching Strategy
 
-- **HTTP cache**: `~/.cache/jpinfectpy/http/` stores raw downloads with ETag metadata
-- **Data cache**: `~/.cache/jpinfectpy/raw/` stores renamed files for user access
+- **HTTP cache**: `~/.cache/jp_idwr_db/http/` stores raw downloads with ETag metadata
+- **Data cache**: `~/.cache/jp_idwr_db/raw/` stores renamed files for user access
 - Files are copied from HTTP cache to data cache, not moved (allows multiple destination dirs)
 
 ## Troubleshooting
@@ -376,14 +376,14 @@ Excel sheet structure changed. Inspect the file manually and update row offsets 
 Default: 20 requests/minute. Increase via:
 
 ```python
-import jpinfectpy as jp
+import jp_idwr_db as jp
 jp.configure(rate_limit_per_minute=60)
 ```
 
 ## Contact & Contribution
 
-- **Repository**: https://github.com/AlFontal/jpinfectpy
-- **Issues**: https://github.com/AlFontal/jpinfectpy/issues
+- **Repository**: https://github.com/AlFontal/jp_idwr_db
+- **Issues**: https://github.com/AlFontal/jp_idwr_db/issues
 - **Upstream R package**: https://github.com/TomonoriHoshi/jpinfect
 
 When filing issues or contributing:
